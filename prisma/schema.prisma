@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Node {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  category    String
+  content     String?
+  importance  Int      @default(5)
+  source      String   @default("manual")
+  reliability String   @default("verified")
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastUsedAt  DateTime @default(now())
+
+  tags            NodeTag[]
+  connectionsFrom NodeConnection[] @relation("FromNode")
+  connectionsTo   NodeConnection[] @relation("ToNode")
+  versions        NodeVersion[]
+  files           NodeFile[]
+  events          BrainEvent[]
+}
+
+model Tag {
+  id    String    @id @default(uuid())
+  name  String    @unique
+  nodes NodeTag[]
+}
+
+model NodeTag {
+  nodeId String
+  tagId  String
+  node   Node   @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  @@id([nodeId, tagId])
+}
+
+model NodeConnection {
+  id         String   @id @default(uuid())
+  fromNodeId String
+  toNodeId   String
+  relation   String   @default("related")
+  type       String   @default("fact")
+  confidence Float    @default(1.0)
+  createdAt  DateTime @default(now())
+  fromNode   Node     @relation("FromNode", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNode     Node     @relation("ToNode",   fields: [toNodeId],   references: [id], onDelete: Cascade)
+  @@unique([fromNodeId, toNodeId])
+}
+
+model NodeVersion {
+  id          String   @id @default(uuid())
+  nodeId      String
+  version     Int
+  title       String
+  description String?
+  content     String?
+  importance  Int      @default(5)
+  reliability String   @default("verified")
+  changedAt   DateTime @default(now())
+  changedBy   String   @default("user")
+  node        Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+}
+
+model NodeFile {
+  id         String   @id @default(uuid())
+  nodeId     String
+  filename   String
+  filepath   String
+  filetype   String
+  filesize   Int
+  uploadedAt DateTime @default(now())
+  node       Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+}
+
+model BrainEvent {
+  id        String   @id @default(uuid())
+  type      String
+  nodeId    String?
+  meta      String?
+  createdAt DateTime @default(now())
+  node      Node?    @relation(fields: [nodeId], references: [id])
+}
+
+model Conversation {
+  id        String    @id @default(uuid())
+  title     String    @default("New Conversation")
+  createdAt DateTime  @default(now())
+  messages  Message[]
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  role           String
+  content        String
+  nodesUsed      String       @default("")
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model MemoryCandidate {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  category    String
+  source      String   @default("ai")
+  reliability String   @default("inferred")
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+}
